@@ -1,0 +1,8 @@
+# Core Google SDKs
+google-adk
+google-adk[extensions]
+sshtunnel
+paramiko<3.0
+psycopg2-binary
+matplotlib
+pandas
