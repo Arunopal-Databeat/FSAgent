@@ -75,7 +75,8 @@ async def run_query(sql_query: str, table_name: str, tool_context: ToolContext) 
 
 
 async def get_tables(tool_context: ToolContext) -> List[str]:
-    return ["public.sales_salesrawtable", "public.financial_financialrawtab"]
+    return ["public.financial_cp_portfolio_lead_mapped", "public.financial_db_actual_backlog", "public.financial_db_fy27_plan_target", "public.financial_mm_actual_backlog", "public.financial_mm_fy27_plan", "public.financial_mm_target_with_portfolio_fy27", "public.financial_taktical_actual_backlog", "public.financial_td_fy27_plan_target",
+            "public.sales_account", "public.sales_opportunity", "public.sales_user"]
 
 
 async def get_columns(table_name: str, tool_context: ToolContext) -> Dict[str, Any]:

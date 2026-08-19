@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 *.pem
 .adk
+test_conn.py
+test_db.py
+app.log
+test.txt
+sessions.db

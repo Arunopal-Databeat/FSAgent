@@ -1,0 +1,26 @@
+Revenue & Actuals
+
+"What's the total Actual + Backlog for [Client] this fiscal year?"
+"How does DataBeat's Actual compare to its Plan for this month?"
+"What's the churn for [Client] this month vs. last month?"
+Pipeline & Opportunities
+
+"What's the weighted pipeline revenue for [Portfolio Lead] in August 2026?"
+"Show me all Stuck Deals (age > 60 days) owned by [Opportunity Owner]."
+"What's the win rate for Taktical Digital this fiscal year?"
+"List all Open Deals past their close date."
+Target/Plan vs. Actual
+
+"How is Mediamint tracking against its client-level Target this FY?"
+"What's DataBeat's cumulative monthly Target vs. its Actual+Backlog?"
+Line of Sight
+
+"What's the Line of Sight (Actual + Backlog + Pipeline) for [Client] for FY27?"
+Mapping/attribution edge cases
+
+"Which deals are unmapped to a specific account but still counted at the group level?"
+"Which clients are missing an SF Client Name entry?"
+Org rollups
+
+"What's the total revenue across Mediamint, DataBeat, and Taktical combined?"
+"Break down pipeline by Business Group."

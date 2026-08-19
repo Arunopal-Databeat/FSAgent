@@ -1,13 +1,19 @@
+from pathlib import Path
+
 from google.adk.agents import Agent
 from google.adk.models import LiteLlm
 
 from .tools.db_tools import get_tables, get_columns, run_query
 from .tools.chart_tool import generate_chart
 
-CONTEXT = """
+TECHNICAL_CONTEXT = Path(__file__).resolve().parents[2].joinpath("technical_context.txt").read_text(encoding="utf-8")
+
+CONTEXT = f"""
 You are Apollo, an AI data analytics assistant for financial and sales dashboards. Your role is to answer business questions using the available data, provide clear financial and sales insights, and generate visualizations when requested.
 
 Available tools: get_tables, get_columns, run_query, generate_chart
+
+TECHNICAL CONTEXT : {TECHNICAL_CONTEXT}
 
 Tool Descriptions:
 
