@@ -11,32 +11,69 @@ _FORBIDDEN_KEYWORDS = re.compile(
     re.IGNORECASE,
 )
 
-# Agent runs on the same host as the Postgres container, which publishes its
-# port directly (docker ps confirms 0.0.0.0:5433->5432/tcp) -- no SSH tunnel
-# needed. This previously tunneled from a developer's laptop into a remote
-# EC2 box; that's no longer the topology now that the agent itself runs on
-# that box.
-DB_HOST = os.environ["DB_HOST"]
-DB_PORT = int(os.environ["DB_PORT"])
+# Two supported modes, chosen via DB_CONNECTION_MODE:
+#   "ssh_tunnel" -- local dev: laptop -> SSH tunnel -> remote EC2 Postgres.
+#                   Needs DB_SSH_HOST/DB_SSH_PORT/DB_SSH_USERNAME/DB_SSH_PKEY/
+#                   DB_REMOTE_PORT.
+#   "direct"     -- server deploy: agent runs on the same host as the
+#                   Postgres container, which publishes its port directly
+#                   (confirmed via docker ps). Needs DB_HOST/DB_PORT.
+# Defaults to "ssh_tunnel" so existing local .env files keep working
+# without needing to add the new variable immediately.
+DB_CONNECTION_MODE = os.environ.get("DB_CONNECTION_MODE", "ssh_tunnel")
+
 DB_NAME = os.environ["DB_NAME"]
 DB_USER = os.environ["DB_USER"]
 DB_PASSWORD = os.environ["DB_PASSWORD"]
 
+_tunnel = None
 _connection = None
 
 
-def get_connection():
+def _get_direct_connection():
     global _connection
     if _connection is None or _connection.closed:
         _connection = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
+            host=os.environ["DB_HOST"],
+            port=int(os.environ["DB_PORT"]),
             database=DB_NAME,
             user=DB_USER,
             password=DB_PASSWORD,
             connect_timeout=10,
         )
     return _connection
+
+
+def _get_tunneled_connection():
+    global _tunnel, _connection
+    from sshtunnel import SSHTunnelForwarder  # imported lazily -- only needed in this mode
+
+    if _tunnel is None or not _tunnel.is_active:
+        _tunnel = SSHTunnelForwarder(
+            (os.environ["DB_SSH_HOST"], int(os.environ["DB_SSH_PORT"])),
+            ssh_username=os.environ["DB_SSH_USERNAME"],
+            ssh_pkey=os.environ["DB_SSH_PKEY"],
+            remote_bind_address=("localhost", int(os.environ["DB_REMOTE_PORT"])),
+        )
+        _tunnel.start()
+        _connection = None
+
+    if _connection is None or _connection.closed:
+        _connection = psycopg2.connect(
+            host="localhost",
+            port=_tunnel.local_bind_port,
+            database=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            connect_timeout=10,
+        )
+    return _connection
+
+
+def get_connection():
+    if DB_CONNECTION_MODE == "direct":
+        return _get_direct_connection()
+    return _get_tunneled_connection()
 
 
 def run_sql_query(sql_query: str, params=None) -> pd.DataFrame:
