@@ -9,3 +9,4 @@ test_db.py
 app.log
 test.txt
 sessions.db
+venv
