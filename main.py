@@ -3,6 +3,7 @@ import uvicorn
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
 import google.auth
+from follow_questions import router as follow_questions_router
 from dotenv import load_dotenv
 load_dotenv(".env", override=True)
 import litellm
@@ -28,6 +29,7 @@ for _cls_name in ("Message", "Choices", "ModelResponse", "Delta", "StreamingChoi
 for _key in ("ANTHROPIC_API_KEY", "GEMINI_API_KEY"):
     if _key in os.environ:
         os.environ[_key] = os.environ[_key].strip()
+        print(os.environ[_key])
 
 # Get the directory where main.py is located
 AGENT_DIR = "agents"
@@ -45,6 +47,9 @@ app: FastAPI = get_fast_api_app(
     allow_origins=ALLOWED_ORIGINS,
     web=SERVE_WEB_INTERFACE,
 )
+
+app.include_router(follow_questions_router)
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8010)))

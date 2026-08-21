@@ -8,5 +8,5 @@ test_conn.py
 test_db.py
 app.log
 test.txt
-sessions.db
+session.db
 venv
