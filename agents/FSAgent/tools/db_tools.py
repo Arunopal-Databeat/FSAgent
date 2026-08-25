@@ -1,6 +1,6 @@
 import os
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import psycopg2
 import pandas as pd
@@ -97,35 +97,5 @@ async def run_query(sql_query: str, table_name: str, tool_context: ToolContext) 
             "rows": df.head(50).to_dict(orient="records"),
             "row_count": len(df),
         }
-    except Exception as e:
-        return {"status": "error", "message": f"{type(e).__name__}: {e}"}
-
-
-async def get_tables(tool_context: ToolContext) -> List[str]:
-    return ["public.financial_cp_portfolio_lead_mapped", "public.financial_db_actual_backlog", "public.financial_db_fy27_plan_target", "public.financial_mm_actual_backlog", "public.financial_mm_fy27_plan", "public.financial_mm_target_with_portfolio_fy27", "public.financial_taktical_actual_backlog", "public.financial_td_fy27_plan_target",
-            "public.sales_account", "public.sales_opportunity", "public.sales_user"]
-
-
-async def get_columns(table_name: str, tool_context: ToolContext) -> Dict[str, Any]:
-    """Return the column names and data types for a table.
-
-    Args:
-        table_name: The (schema-qualified) table to inspect, e.g. "public.sales_salesrawtable".
-    """
-    schema, _, name = table_name.rpartition(".")
-    schema = schema or "public"
-    try:
-        df = run_sql_query(
-            """
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_schema = %s AND table_name = %s
-            ORDER BY ordinal_position
-            """,
-            params=(schema, name),
-        )
-        if df.empty:
-            return {"status": "error", "message": f"No columns found for table '{table_name}'."}
-        return {"status": "success", "columns": df.to_dict(orient="records")}
     except Exception as e:
         return {"status": "error", "message": f"{type(e).__name__}: {e}"}
