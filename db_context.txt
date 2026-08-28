@@ -1,320 +1,208 @@
 Tables available:
     Sales: sales_opportunity, sales_account, sales_user
-    Finance: financial_cp_portfolio_lead_mapped, financial_mm_actual_backlog, financial_mm_fy27_plan, financial_mm_target_with_portfolio_fy27, financial_db_actual_backlog, financial_db_fy27_plan_target, financial_taktical_actual_backlog, financial_td_fy27_plan_target
+    Finance: financial_clientportfoliomapping, financial_cliententitymapping, financial_mmactualbacklog, financial_mmplan, financial_mmtargetportfolio, financial_dbactualbacklog, financial_dbplantarget, financial_takticalactualbacklog, financial_tdplantarget
+
+All column names below are case-sensitive and contain spaces/mixed case in several tables — always double-quote them in SQL, e.g. "Client Name", "Apr-26".
+
+IMPORTANT — data quality: financial_mmactualbacklog, financial_mmplan, financial_mmtargetportfolio, financial_dbactualbacklog, financial_dbplantarget, financial_takticalactualbacklog, and financial_tdplantarget all mix real client rows with rollup/placeholder rows (e.g. "Board Plan NC", "Board Plan EC", "Target", "NC Target", "EC Target"). Each of these tables has an is_aggregate boolean column that flags these rows directly — always filter WHERE is_aggregate = false (or = FALSE) before doing any client-level sum, average, or join. Do not fall back to name-pattern matching (ILIKE '%target%'/'%board%') to find these rows — is_aggregate already does it reliably.
+
+Examples:
+
+- Wrong (includes placeholder rows, double-counts against real clients):
+  SELECT SUM("FY27 Total") FROM financial_mmtargetportfolio;
+
+- Right (client-level total, placeholders excluded):
+  SELECT SUM("FY27 Total") FROM financial_mmtargetportfolio WHERE is_aggregate = false;
+
+- Wrong (fragile, will miss/mismatch rows like "EC Target" or catch legitimate client names containing "target"):
+  SELECT * FROM financial_dbplantarget WHERE "Account" NOT ILIKE '%target%' AND "Account" NOT ILIKE '%board%';
+
+- Right (same intent, reliable):
+  SELECT * FROM financial_dbplantarget WHERE is_aggregate = false;
+
+- If you actually want the pre-computed rollup/company-wide total (e.g. "what's the total NC target across all clients"), query the is_aggregate = true row directly instead of summing client rows yourself:
+  SELECT "FY27 Total" FROM financial_mmtargetportfolio WHERE is_aggregate = true AND "Client Name" = 'NC Target';
+
+- Joining to the mapping table should also filter first, so placeholder rows don't produce spurious/null-matched join rows:
+  SELECT b."Client Name", b."Total", m."Portfolio Lead"
+  FROM financial_mmactualbacklog b
+  JOIN financial_clientportfoliomapping m ON m."Client Name" = b."Client Name"
+  WHERE b.is_aggregate = false;
 
 ## Table: public.sales_opportunity
 
 | Column | Type |
 |---|---|
-| id | text |
-| accountid | text |
-| name | text |
-| description | text |
-| stagename | text |
-| probability | numeric |
-| closedate | date |
-| isclosed | boolean |
-| ownerid | text |
-| createddate | timestamptz |
-| annual_contracted_value_c | numeric |
-| leadsource | text |
-| company_group_c | text |
-| go_live_date_c | date |
-| headcount_c | numeric |
-| resource_type_c | text |
-| service_delivery_model_c | text |
-| laststagechangeindays | bigint |
-| revenue_type_c | text |
-| lastactivityindays | bigint |
-| project_duration_c | numeric |
+| id | bigint |
 | snapshot_date | date |
+| Id | text |
+| AccountId | text |
+| Name | text |
+| Description | text |
+| StageName | text |
+| Probability | double precision |
+| CloseDate | date |
+| IsClosed | boolean |
+| OwnerId | text |
+| CreatedDate | timestamptz |
+| Annual_Contracted_Value__c | double precision |
+| LeadSource | text |
+| Company_Group__c | text |
+| Go_Live_Date__c | text |
+| HeadCount__c | text |
+| Resource_Type__c | text |
+| Service_Delivery_Model__c | text |
+| LastStageChangeInDays | integer |
+| Revenue_Type__c | text |
+| LastActivityInDays | integer |
+| Project_Duration__c | text |
 
 ## Table: public.sales_account
 
 | Column | Type |
 |---|---|
-| id | text |
-| isdeleted | boolean |
-| masterrecordid | text |
-| name | text |
-| type | text |
-| parentid | text |
-| billingstreet/city/state/postal/country/latitude/longitude/geocodeaccuracy | text |
-| shippingstreet/city/state/postal/country/latitude/longitude/geocodeaccuracy | text |
-| phone | text |
-| website | text |
-| photourl | text |
-| industry | text |
-| numberofemployees | bigint |
-| description | text |
-| ownerid | text |
-| createddate | timestamptz |
-| createdbyid | text |
-| lastmodifieddate | timestamptz |
-| lastmodifiedbyid | text |
-| systemmodstamp | timestamptz |
-| lastactivitydate | date |
-| lastvieweddate | timestamptz |
-| lastreferenceddate | timestamptz |
-| ispartner | boolean |
-| channelprogramname | text |
-| channelprogramlevelname | text |
-| jigsaw / jigsawcompanyid | text |
-| accountsource | text |
-| sicdesc | text |
-| activitymetricid | text |
-| ispriorityrecord | boolean |
-| event_name_c | text |
-| initial_connect_intro_c | text |
-| exclusive_offer_c | text |
-| primary_account_lead_source_c | text |
-| company_phone_c | text |
-| company_size_range_c | text |
-| company_bio_c | text |
-| location_c | text |
-| company_google_news_c | text |
-| company_glassdoor_c | text |
-| company_google_finance_c | text |
-| company_twitter_c | text |
-| estimated_revenue_c | text |
-| similar_site_search_link_c | text |
-| similar_web_results_link_c | text |
-| alexa_score_link_c | text |
-| company_linkedin_url_c | text |
-| company_info_link_seamless_c | text |
-| company_speciality_c | text |
-| company_priority_c | numeric |
-| official_start_date_c | date |
-| category_c | text |
-| status_c | text |
-| end_date_c | date |
-| client_id_c | numeric (join key: MM ID) |
-| reference_name_c | text |
-| active_c | boolean |
-| sales_engg_poc_c | text |
-| account_id_c | text |
-| engagement_lead_c | text |
-| stage_c | text |
-| expected_hc_c | numeric |
-| discovery_call_2_c | text |
-| solutions_call_1_c | text |
-| solutions_call_2_c | text |
-| contract_sent_date_c | text |
-| contract_signed_date_c | text |
-| addendum_created_sent_c | text |
-| onboarding_kick_off_call_c | text |
-| no_of_projects_c | numeric |
-| no_of_opportunities_c | numeric |
-| current_category_c | text |
-| restart_date_c | date |
-| deactivated_date_c | date |
-| total_monthly_prorated_sum_c | numeric |
-| hc_c | numeric |
-| no_of_reductions_c | numeric |
-| current_hc_c | numeric |
-| original_contract_signed_date_c | date |
-| total_monthly_rev_c | numeric |
-| prorated_reduction_sum_c | numeric |
-| total_reduction_sum_c | numeric |
-| contract_renewal_date_c | date |
-| competitor_info_c | text |
-| competitive_intelligence_c | text |
-| tier_c | text |
-| total_acct_sp_c | numeric |
-| account_type_c | text |
-| reductions_sum_c | numeric |
-| current_monthly_rev_c | numeric |
-| client_partner_c | text |
-| pod_name_c / pod_owner_c | text |
-| original_sales_rep_c | text |
-| partner_name_c | text |
-| potential_tier_c / current_tier_c | text |
-| primary_target_c | text |
-| business_group_leader_c | text |
-| group_lead_c | text |
-| company_group_c | text |
-| advisors_c / advisor_name_c / advisor_contact_c | bool / text |
-| account_stage_c | text |
-| business_group_c | text |
-| xbeamprod_available_overlaps_c | text |
-| business_unit_c | text |
+| id | bigint |
 | snapshot_date | date |
+| Id | text |
+| Name | text |
+| Status__c | text (Active / Deactivated / Inactive) |
+| Type | text (Prospect / Other / New Business / Partner / Customer / '') |
+| Industry | text |
+| Account_Type__c | text (Existing Client / New Client) |
+| OwnerId | text |
+| Primary_Account_Lead_Source__c | text |
+| Client_ID__c | text (join key: MM ID, blank for many rows) |
 
-## Table: public.financial_cp_portfolio_lead_mapped
+## Table: public.sales_user
+
+| Column | Type |
+|---|---|
+| id | bigint |
+| snapshot_date | date |
+| Id | text |
+| Name | text |
+| IsActive | boolean |
+
+## Table: public.financial_clientportfoliomapping
 
 Central mapping sheet: Client ↔ Portfolio Lead ↔ Entity
 
 | Column | Type |
 |---|---|
-| client_name | text |
-| portfolio_lead | text |
-| client_partner | text |
-| client_entity | text |
-| mm_id | text |
-| operational_group | text (MM / DataBeat / Taktical) |
-| portfolio_lead_email | text |
-| client_partner_email | text |
-| client_type | text (Existing/New) |
-| client_tier | text (not used) |
-| sf_client_name | text |
-| col, col_1..col_5 | text (unused/reserved) |
-| name / email | text |
-| sheet | text |
+| id | bigint |
 | snapshot_date | date |
+| Client Name | text |
+| Portfolio Lead | text |
+| Client Partner | text |
+| Client Entity | text |
+| MM ID | text |
+| Operational Group | text (Mediamint / DataBeat / Taktical) |
+| Portfolio Lead Email | text |
+| Client Partner Email | text |
+| Client Type | text (Existing Client / New Client) |
+| SF Client Name | text |
 
-## Table: public.financial_mm_actual_backlog
+## Table: public.financial_cliententitymapping
+
+Client partnership tier mapping
+
+| Column | Type |
+|---|---|
+| id | bigint |
+| snapshot_date | date |
+| Client | text |
+| Partnership Level | text (1. Mint Platinum / 2. Mint Elite / 3. Mint Core / 4. Mint Agencies / 5. Mint SMB) |
+
+## Table: public.financial_mmactualbacklog
 
 Mediamint Actual & Backlog by client
 
 | Column | Type |
 |---|---|
-| client_name | text |
-| portfolio_lead | text |
-| client_partner | text |
-| client_entity | text |
-| mm_id | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| total | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Client Name | text |
+| is_aggregate | boolean (true = rollup/placeholder row, e.g. "Board Plan NC" — exclude for client-level analysis) |
+| Total | integer |
 
-## Table: public.financial_mm_fy27_plan
+## Table: public.financial_mmplan
 
 Mediamint FY27 Board Plan by client
 
 | Column | Type |
 |---|---|
-| client_name | text |
-| parent_roll_up_client | text |
-| account_owner | text |
-| portfolio | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| fy27_total | bigint |
-| col | text |
-| q1 / q2 / q3 / q4 | bigint (quarterly rollups) |
-| fy27 | bigint |
-| col_1 | text |
-| fy_26_actuals | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Client Name | text |
+| is_aggregate | boolean (true = rollup/placeholder row, e.g. "Board Plan NC" — exclude for client-level analysis) |
+| FY27 Total | integer |
 
-## Table: public.financial_mm_target_with_portfolio_fy27
+## Table: public.financial_mmtargetportfolio
 
 Mediamint FY27 Target by client, w/ portfolio
 
 | Column | Type |
 |---|---|
-| client_name | text |
-| parent_roll_up_client | text |
-| account_owner | text |
-| portfolio | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| fy27_total | bigint |
-| col | text |
-| q1 / q2 / q3 / q4 | bigint (quarterly rollups) |
-| fy27_total_1 | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Client Name | text |
+| is_aggregate | boolean (true = rollup/placeholder row, e.g. "NC Target" — exclude for client-level analysis) |
+| FY27 Total | integer |
 
-## Table: public.financial_db_actual_backlog
+## Table: public.financial_dbactualbacklog
 
 DataBeat Actual & Backlog by client
 
 | Column | Type |
 |---|---|
-| account | text |
-| portfolio_lead | text |
-| client_partner | text |
-| client_entity | text |
-| mm_id | text |
-| practice | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| total | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Account | text |
+| is_aggregate | boolean |
+| Total | integer |
 
-## Table: public.financial_db_fy27_plan_target
+## Table: public.financial_dbplantarget
 
-DataBeat FY27 Plan & Target — cumulative, not client-level
+DataBeat FY27 Plan & Target
 
 | Column | Type |
 |---|---|
-| account | text |
-| biz_group | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| fy27 | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Account | text |
+| is_aggregate | boolean (true = rollup/placeholder row, e.g. "Board Plan NC", "Target" — exclude for client-level analysis) |
+| FY27 | integer |
 
-## Table: public.financial_taktical_actual_backlog
+## Table: public.financial_takticalactualbacklog
 
 Taktical Digital Actual & Backlog by client
 
 | Column | Type |
 |---|---|
-| client_name | text |
-| portfolio_lead | text |
-| client_partner | text |
-| client_entity | text |
-| mm_id | text |
-| business_group | text |
-| apr_26 ... mar_27 | bigint (monthly values) |
-| total | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
+| Client Name | text |
+| is_aggregate | boolean |
+| Total | integer |
 
-## Table: public.financial_td_fy27_plan_target
+## Table: public.financial_tdplantarget
 
-Taktical FY27 Plan & Target — cumulative, not client-level
+Taktical FY27 Plan & Target
 
 | Column | Type |
 |---|---|
-| client | text |
-| apr_26 ... dec_26 | bigint (monthly values) |
-| jan_26 / feb_26 / mar_26 | bigint (note: mislabeled year in source sheet — represents Jan-Mar 2027 based on FY27 context) |
-| fy_27 | bigint |
-| sheet | text |
+| id | bigint |
+| Apr-26 ... Mar-27 | integer (monthly values) |
 | snapshot_date | date |
-
-## Table: public.sales_user
-
-Salesforce User object
-
-| Column | Type |
-|---|---|
-| id | text |
-| username | text |
-| lastname / firstname / middlename / suffix / name | text |
-| companyname | text |
-| division / department / title | text |
-| street/city/state/postalcode/country/latitude/longitude/geocodeaccuracy | text / bigint |
-| email | text |
-| senderemail / sendername | text |
-| signature | text |
-| phone / fax / mobilephone | text |
-| alias | text |
-| communitynickname | text |
-| badgetext | text |
-| isactive | boolean |
-| timezonesidkey / localesidkey / languagelocalekey | text |
-| userroleid | text |
-| profileid | text |
-| usertype | text |
-| startday / endday | bigint |
-| employeenumber | text |
-| delegatedapproverid | text |
-| managerid | text |
-| lastlogindate | timestamptz |
-| createddate / createdbyid | timestamptz / text |
-| lastmodifieddate / lastmodifiedbyid | timestamptz / text |
-| systemmodstamp | timestamptz |
-| ispartner | boolean |
-| contactid | text |
-| accountid | text |
-| callcenterid | text |
-| individualid | text |
-| (~140 additional Salesforce UI/preference & feature-flag columns: userpreferences..., pi_..., dsfs_... — not business-relevant, omitted for brevity) | |
-| snapshot_date | date |
+| Client | text |
+| is_aggregate | boolean (true = rollup/placeholder row, e.g. "Target" — exclude for client-level analysis) |
+| FY 27 | integer |
 
 ## Relationships
 
@@ -322,45 +210,42 @@ Salesforce User object
 
 | Table A | Column A | Table B | Column B | Relationship |
 |---|---|---|---|---|
-| sales_opportunity | accountid | sales_account | id | Deal -> owning Account |
-| sales_opportunity | ownerid | sales_user | id | Deal -> Opportunity Owner (rep) |
-| sales_account | ownerid | sales_user | id | Account -> Account Owner |
-| sales_user | managerid | sales_user | id | Self-join: Rep -> their Manager |
-| sales_account | parentid | sales_account | id | Self-join: Child -> Parent Account |
+| sales_opportunity | AccountId | sales_account | Id | Deal -> owning Account |
+| sales_opportunity | OwnerId | sales_user | Id | Deal -> Opportunity Owner (rep) |
+| sales_account | OwnerId | sales_user | Id | Account -> Account Owner |
 
 ### Sales ↔ Finance Bridge (the "Waterfall" logic)
 
 | Table A | Column A | Table B | Column B | Relationship / Match Priority |
 |---|---|---|---|---|
-| sales_account | client_id_c | financial_cp_portfolio_lead_mapped | mm_id | Step 1 (most reliable) - ID match |
-| sales_account | name | financial_cp_portfolio_lead_mapped | sf_client_name | Step 2 - verified SF spelling match |
-| sales_account | name | financial_cp_portfolio_lead_mapped | client_entity | Step 3 - direct entity name match |
-| sales_opportunity | company_group_c | financial_cp_portfolio_lead_mapped | operational_group | Step 4 (last resort, group-level only) |
+| sales_account | Client_ID__c | financial_clientportfoliomapping | MM ID | Step 1 (most reliable) - ID match |
+| sales_account | Name | financial_clientportfoliomapping | SF Client Name | Step 2 - verified SF spelling match |
+| sales_account | Name | financial_clientportfoliomapping | Client Entity | Step 3 - direct entity name match |
+| sales_opportunity | Company_Group__c | financial_clientportfoliomapping | Operational Group | Step 4 (last resort, group-level only) |
 
 Steps 1-3 apply to specific account attribution (Use Case B). All 4 steps apply to broad group/entity classification (Use Case A) — stop at the first step that returns a match.
 
 ### Finance Tables ↔ Central Mapping Sheet
 
-All finance tables join back to financial_cp_portfolio_lead_mapped using client_name (and mm_id where available) as the key:
+All finance tables join back to financial_clientportfoliomapping using client name (and MM ID where available) as the key:
 
 | Table A | Column A | Table B | Column B |
 |---|---|---|---|
-| financial_mm_actual_backlog | client_name | financial_cp_portfolio_lead_mapped | client_name |
-| financial_mm_actual_backlog | mm_id | financial_cp_portfolio_lead_mapped | mm_id |
-| financial_mm_fy27_plan | client_name | financial_cp_portfolio_lead_mapped | client_name |
-| financial_mm_target_with_portfolio_fy27 | client_name | financial_cp_portfolio_lead_mapped | client_name |
-| financial_db_actual_backlog | account | financial_cp_portfolio_lead_mapped | client_name |
-| financial_db_actual_backlog | mm_id | financial_cp_portfolio_lead_mapped | mm_id |
-| financial_db_fy27_plan_target | account | financial_cp_portfolio_lead_mapped | client_name * |
-| financial_taktical_actual_backlog | client_name | financial_cp_portfolio_lead_mapped | client_name |
-| financial_taktical_actual_backlog | mm_id | financial_cp_portfolio_lead_mapped | mm_id |
-| financial_td_fy27_plan_target | client | financial_cp_portfolio_lead_mapped | client_name * |
+| financial_mmactualbacklog | Client Name | financial_clientportfoliomapping | Client Name |
+| financial_mmplan | Client Name | financial_clientportfoliomapping | Client Name |
+| financial_mmtargetportfolio | Client Name | financial_clientportfoliomapping | Client Name |
+| financial_dbactualbacklog | Account | financial_clientportfoliomapping | Client Name |
+| financial_dbplantarget | Account | financial_clientportfoliomapping | Client Name * |
+| financial_takticalactualbacklog | Client Name | financial_clientportfoliomapping | Client Name |
+| financial_tdplantarget | Client | financial_clientportfoliomapping | Client Name * |
+| financial_cliententitymapping | Client | financial_clientportfoliomapping | Client Name |
 
-\* DB and TD Plan & Target sheets only have a cumulative monthly Target across all clients (per the reference notes) — they don't break down Target at the client level like Mediamint does, so joins to those rows are mainly useful for Plan figures, not Target attribution per client.
+\* DB and TD Plan & Target tables mix per-client rows with cumulative/rollup rows flagged by is_aggregate = true (e.g. "Board Plan NC", "Target") — filter these out (WHERE is_aggregate = false) before doing client-level Target attribution.
 
 ### Key Notes on the Relationships
 
-- mm_id is the most reliable join key wherever it's populated — it directly links sales_account.client_id_c to every finance table's mm_id/client_name field via the mapping sheet.
-- client_entity in the mapping sheet serves double duty: it rolls up subsidiary companies under one parent for reporting, and acts as a fallback match key against sales_account.name.
-- operational_group in the mapping sheet is the field that ultimately decides whether a client/deal counts under Mediamint, DataBeat, or Taktical for entity-level rollups.
-- Only Mediamint's target table (financial_mm_target_with_portfolio_fy27) has true client-level Target detail — DB and TD only break out Target at the aggregate/cumulative level.
+- Client_ID__c / MM ID is the most reliable join key wherever it's populated — it directly links sales_account.Client_ID__c to every finance table's client name field via the mapping sheet. It is blank for many sales_account rows.
+- Client Entity in the mapping sheet serves double duty: it rolls up subsidiary companies under one parent for reporting, and acts as a fallback match key against sales_account.Name.
+- Operational Group in the mapping sheet is the field that ultimately decides whether a client/deal counts under Mediamint, DataBeat, or Taktical for entity-level rollups.
+- is_aggregate = true rows are pre-flagged rollup/placeholder rows (parent totals, "Board Plan NC/EC", "Target", "NC Target") mixed into the plan/target/backlog tables — always filter WHERE is_aggregate = false for client-level math; leave them in only when you deliberately want the pre-computed rollup total.
+- financial_cliententitymapping gives each client's Partnership Level tier (1. Mint Platinum highest ... 5. Mint SMB lowest), separate from the client_type Existing/New flag in financial_clientportfoliomapping.
