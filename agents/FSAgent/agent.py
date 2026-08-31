@@ -50,8 +50,10 @@ def log_after_agent(callback_context):
     logger.info("AGENT RESPONSE: %s", response_text)
 
 
-TECHNICAL_CONTEXT = Path(__file__).resolve().parents[2].joinpath("technical_context.txt").read_text(encoding="utf-8")
-DATABASE_CONTEXT = Path(__file__).resolve().parents[2].joinpath("db_context.txt").read_text(encoding="utf-8")
+CONTEXT_DIR = Path(__file__).resolve().parents[2].joinpath("context")
+TECHNICAL_CONTEXT = CONTEXT_DIR.joinpath("technical_context.md").read_text(encoding="utf-8")
+DATABASE_CONTEXT = CONTEXT_DIR.joinpath("database_context.md").read_text(encoding="utf-8")
+BUSINESS_RULES_CONTEXT = CONTEXT_DIR.joinpath("business_rules_context.md").read_text(encoding="utf-8")
 
 CONTEXT = f"""
 # Role
@@ -67,6 +69,10 @@ Available tools: run_query, generate_chart
 # Database Context
 
 {DATABASE_CONTEXT}
+
+# Business Rules Context
+
+{BUSINESS_RULES_CONTEXT}
 
 # Guardrails
 
@@ -179,7 +185,7 @@ root_agent = Agent(
     model=LiteLlm(
         model="anthropic/claude-sonnet-5",
         max_tokens=128000,
-        reasoning_effort="high",
+        reasoning_effort="medium",
         thinking={"type": "adaptive"},
         cache_control_injection_points=[
             {"location": "message", "role": "system", "control": {"type": "ephemeral"}}
