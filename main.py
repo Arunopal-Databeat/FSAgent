@@ -6,6 +6,29 @@ import google.auth
 from follow_questions import router as follow_questions_router
 from dotenv import load_dotenv
 load_dotenv(".env", override=True)
+
+DB_CONNECTION_MODE = os.environ.get("DB_CONNECTION_MODE", "ssh_tunnel")
+
+if DB_CONNECTION_MODE == "direct":
+    _session_db_host = os.environ["DB_HOST"]
+    _session_db_port = int(os.environ["DB_PORT"])
+else:
+    from sshtunnel import SSHTunnelForwarder
+
+    _session_tunnel = SSHTunnelForwarder(
+        (os.environ["DB_SSH_HOST"], int(os.environ["DB_SSH_PORT"])),
+        ssh_username=os.environ["DB_SSH_USERNAME"],
+        ssh_pkey=os.environ["DB_SSH_PKEY"],
+        remote_bind_address=("localhost", int(os.environ["DB_REMOTE_PORT"])),
+    )
+    _session_tunnel.start()
+    _session_db_host = "localhost"
+    _session_db_port = _session_tunnel.local_bind_port
+
+SESSION_SERVICE_URI = (
+    f"postgresql+asyncpg://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}"
+    f"@{_session_db_host}:{_session_db_port}/{os.environ['DB_NAME']}"
+)
 import litellm
 litellm._turn_on_debug()
 
@@ -46,6 +69,7 @@ app: FastAPI = get_fast_api_app(
     agents_dir=AGENT_DIR,
     allow_origins=ALLOWED_ORIGINS,
     web=SERVE_WEB_INTERFACE,
+    session_service_uri=SESSION_SERVICE_URI,
 )
 
 app.include_router(follow_questions_router)
