@@ -1,3 +1,4 @@
+import logging
 import os
 import uvicorn
 from fastapi import FastAPI
@@ -6,6 +7,20 @@ import google.auth
 from follow_questions import router as follow_questions_router
 from dotenv import load_dotenv
 load_dotenv(".env", override=True)
+
+_console_handler = logging.StreamHandler()
+_console_handler.setLevel(logging.ERROR)
+_file_handler = logging.FileHandler("app.log")
+_file_handler.setLevel(logging.DEBUG)
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    handlers=[_console_handler, _file_handler],
+)
+logging.getLogger("google_adk").setLevel(logging.DEBUG)
+logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
+logging.getLogger("graphviz._tools").setLevel(logging.WARNING)
 
 DB_CONNECTION_MODE = os.environ.get("DB_CONNECTION_MODE", "ssh_tunnel")
 
@@ -29,6 +44,9 @@ SESSION_SERVICE_URI = (
     f"postgresql+asyncpg://{os.environ['DB_USER']}:{os.environ['DB_PASSWORD']}"
     f"@{_session_db_host}:{_session_db_port}/{os.environ['DB_NAME']}"
 )
+
+from agents.FSAgent.tools.db_connection import get_connection as _get_agent_db_connection
+_get_agent_db_connection()
 import litellm
 litellm._turn_on_debug()
 

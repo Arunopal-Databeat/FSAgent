@@ -6,7 +6,7 @@ __pycache__/
 .adk
 test_conn.py
 test_db.py
-app.log
 test.txt
 session.db
 venv
+app.log

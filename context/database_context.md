@@ -6,6 +6,8 @@ All column names below are case-sensitive and contain spaces/mixed case in sever
 
 IMPORTANT — data quality: financial_mmactualbacklog, financial_mmplan, financial_mmtargetportfolio, financial_dbactualbacklog, financial_dbplantarget, financial_takticalactualbacklog, and financial_tdplantarget all mix real client rows with rollup/placeholder rows (e.g. "Board Plan NC", "Board Plan EC", "Target", "NC Target", "EC Target"). Each of these tables has an is_aggregate boolean column that flags these rows directly — always filter WHERE is_aggregate = false (or = FALSE) before doing any client-level sum, average, or join. Do not fall back to name-pattern matching (ILIKE '%target%'/'%board%') to find these rows — is_aggregate already does it reliably.
 
+IMPORTANT — client access control: every table below that is tagged **Client-scoped** carries a column that identifies the client the row belongs to. Access to this data is restricted per user — before running any query against a client-scoped table, call get_mapped_clients to get the list of clients the current user is allowed to see, then add a filter on that table's client column restricting rows to that list (e.g. WHERE "Client Name" = ANY(:mapped_clients)). Never return or aggregate client-scoped rows outside the user's mapped client list, even if the user asks for "all clients" or a client by name that isn't in their mapped list.
+
 Examples:
 
 - Wrong (includes placeholder rows, double-counts against real clients):
@@ -87,6 +89,8 @@ Examples:
 
 Central mapping sheet: Client ↔ Portfolio Lead ↔ Entity
 
+**Client-scoped** — client column: "Client Name" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
+
 | Column | Type |
 |---|---|
 | id | bigint |
@@ -106,6 +110,8 @@ Central mapping sheet: Client ↔ Portfolio Lead ↔ Entity
 
 Client partnership tier mapping
 
+**Client-scoped** — client column: Client — filter to the user's mapped clients (from get_mapped_clients) before returning results.
+
 | Column | Type |
 |---|---|
 | id | bigint |
@@ -116,6 +122,8 @@ Client partnership tier mapping
 ## Table: public.financial_mmactualbacklog
 
 Mediamint Actual & Backlog by client
+
+**Client-scoped** — client column: "Client Name" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
 
 | Column | Type |
 |---|---|
@@ -130,6 +138,8 @@ Mediamint Actual & Backlog by client
 
 Mediamint FY27 Board Plan by client
 
+**Client-scoped** — client column: "Client Name" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
+
 | Column | Type |
 |---|---|
 | id | bigint |
@@ -142,6 +152,8 @@ Mediamint FY27 Board Plan by client
 ## Table: public.financial_mmtargetportfolio
 
 Mediamint FY27 Target by client, w/ portfolio
+
+**Client-scoped** — client column: "Client Name" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
 
 | Column | Type |
 |---|---|
@@ -156,6 +168,8 @@ Mediamint FY27 Target by client, w/ portfolio
 
 DataBeat Actual & Backlog by client
 
+**Client-scoped** — client column: "Account" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
+
 | Column | Type |
 |---|---|
 | id | bigint |
@@ -168,6 +182,8 @@ DataBeat Actual & Backlog by client
 ## Table: public.financial_dbplantarget
 
 DataBeat FY27 Plan & Target
+
+**Client-scoped** — client column: "Account" — filter to the user's mapped clients (from get_mapped_clients) before returning results.
 
 | Column | Type |
 |---|---|

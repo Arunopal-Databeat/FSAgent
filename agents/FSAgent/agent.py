@@ -1,54 +1,17 @@
-import logging
 from pathlib import Path
 
 from google.adk.agents import Agent
 from google.adk.models import LiteLlm
 
-from .tools.db_tools import run_query
+from .tools.db_tools import run_query, get_mapped_clients
 from .tools.chart_tool import generate_chart
-
-LOG_FILE = Path(__file__).resolve().parents[2].joinpath("app.log")
-
-logger = logging.getLogger("fsagent")
-logger.setLevel(logging.INFO)
-if not logger.handlers:
-    _file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    _file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
-    logger.addHandler(_file_handler)
-
-
-def log_before_tool(tool, args, tool_context):
-    logger.info("CALL %s args=%s", tool.name, args)
-
-
-def log_after_tool(tool, args, tool_context, tool_response):
-    logger.info("RETURN %s args=%s response=%s", tool.name, args, tool_response)
-
-
-def _content_text(content) -> str:
-    if not content or not content.parts:
-        return ""
-    return "".join(part.text for part in content.parts if getattr(part, "text", None))
-
-
-def log_before_agent(callback_context):
-    question = _content_text(callback_context.user_content)
-    logger.info("USER QUESTION: %s", question)
-
-
-def log_after_agent(callback_context):
-    response_text = ""
-    for event in reversed(callback_context.session.events):
-        if event.invocation_id != callback_context.invocation_id:
-            continue
-        if event.author == "user" or event.partial:
-            continue
-        text = _content_text(event.content)
-        if text:
-            response_text = text
-            break
-    logger.info("AGENT RESPONSE: %s", response_text)
-
+from .callbacks.data_masking_callbacks import (
+    mask_before_agent_callback,
+    unmask_after_agent_callback,
+    unmask_after_model_callback,
+    unmask_before_tool_callback,
+    mask_after_tool_callback,
+)
 
 CONTEXT_DIR = Path(__file__).resolve().parents[2].joinpath("context")
 TECHNICAL_CONTEXT = CONTEXT_DIR.joinpath("technical_context.md").read_text(encoding="utf-8")
@@ -60,7 +23,7 @@ CONTEXT = f"""
 
 You are Apollo, an AI data analytics assistant for financial and sales dashboards. Your role is to answer business questions using the available data, provide clear financial and sales insights, and generate visualizations when requested.
 
-Available tools: run_query, generate_chart
+Available tools: run_query, generate_chart, get_mapped_clients
 
 # Technical Context
 
@@ -90,6 +53,13 @@ Stay within the boundaries of the available data sources described in the Techni
 
 * **`run_query`** — Executes a SQL query against the available data. Use it to retrieve, filter, aggregate, compare, and analyze financial and sales data based on the user's request.
 * **`generate_chart`** — Generates visualizations from the requested data analysis. Use it when the user explicitly asks for charts, graphs, or visual representations of financial or sales metrics.
+* **`get_mapped_clients`** — Returns the list of clients the current user is authorized to see. Use it to establish the user's client access scope.
+
+## Client Access Control
+
+Call get_mapped_clients at least once per conversation, before the first run_query call, to get the current user's list of authorized clients. Reuse that list for the rest of the conversation instead of calling get_mapped_clients again, unless the tool previously errored or returned no clients.
+The Database Context below marks every table that carries a client-identifying column as **Client-scoped**. Any run_query call against a Client-scoped table must include a FILTER (a WHERE clause) restricting that table's client column to the clients returned by get_mapped_clients.
+Never return, sum, or otherwise expose rows for a client that is not in the user's mapped client list, even if the user names that client directly or asks for "all clients." If the user asks about a client outside their mapped list, or get_mapped_clients returns no clients, tell them the client is not accessible to them rather than running the query.
 
 ## Query Optimization
 
@@ -111,6 +81,7 @@ Apply this optimization standard to every user question without exception — th
 For data-related requests, consult the Database Context above to identify the most relevant table(s) and confirm the actual column names, data types, and available fields. Never assume a column or table exists beyond what is documented there.
 When the requested information may exist across multiple tables, identify the relevant tables and their join keys from the Database Context before constructing joins or sequential queries.
 Use run_query only after identifying the relevant tables, columns, and join keys from the Database Context.
+Every run_query call against a table marked **Client-scoped** in the Database Context must include a FILTER (a WHERE clause) on that table's client column, restricted to the clients returned by get_mapped_clients — this applies to every such query, not only ones where the user explicitly names a client.
 If the requested data cannot immediately be found, consider other relevant tables and alternative column names documented in the Database Context before concluding that the data is unavailable.
 When multiple tables contribute to an answer, clearly understand the relationship and join keys (as documented in the Database Context) before combining them.
 
@@ -151,6 +122,7 @@ Give the user a direct answer first, followed by the most relevant supporting an
 Explain where the data came from by naming the table or tables used when appropriate.
 Do not claim that data is unavailable after checking only one possible source when other relevant tables may exist.
 Do not expose internal project IDs, credentials, system details, stack traces, or implementation-specific errors.
+Never surface tool or parameter names, raw JSON keys, or query/response metadata in the response (e.g. table_name, table_info, sql_query, columns, row_count, status). When naming a data source, use the plain business-friendly table or dataset name in prose (e.g. "the sales actuals table"), never the literal argument or field name from a tool call.
 Keep simple questions concise and provide more structured analysis for complex financial or sales questions.
 
 ** Table Formatting **
@@ -196,9 +168,10 @@ root_agent = Agent(
     ),
     description="A helpful Claude-powered assistant",
     instruction=CONTEXT,
-    tools=[run_query, generate_chart],
-    before_agent_callback=log_before_agent,
-    after_agent_callback=log_after_agent,
-    before_tool_callback=log_before_tool,
-    after_tool_callback=log_after_tool,
+    tools=[run_query, generate_chart, get_mapped_clients],
+    before_agent_callback=mask_before_agent_callback,
+    after_agent_callback=unmask_after_agent_callback,
+    after_model_callback=unmask_after_model_callback,
+    before_tool_callback=unmask_before_tool_callback,
+    after_tool_callback=mask_after_tool_callback,
 )

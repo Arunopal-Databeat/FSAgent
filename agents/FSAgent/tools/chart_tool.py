@@ -25,7 +25,7 @@ def make_cache_key(prefix: str, params: Dict[str, Any]) -> str:
 def df_to_serializable(df: pd.DataFrame) -> Dict[str, Any]:
     try:
         df_json = df.to_json(orient="split", date_format="iso")
-        preview = df.head(10).to_dict(orient="records")
+        preview = json.loads(json.dumps(df.head(10).to_dict(orient="records"), default=str))
         dtypes = {col: str(dtype) for col, dtype in df.dtypes.items()}
         return {"df_json": df_json, "preview": preview, "columns": list(df.columns), "dtypes": dtypes, "rows": len(df)}
     except Exception as e:
