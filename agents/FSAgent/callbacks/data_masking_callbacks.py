@@ -54,7 +54,12 @@ def unmask_after_agent_callback(callback_context):
 
 def unmask_before_tool_callback(tool, args, tool_context):
     # CALL run_query args={'sql_query': 'SELECT region, SUM(revenue) FROM sales_actuals GROUP BY region', 'table_name': 'public.sales_actuals'}
-    if tool.name == "run_query":
+    if tool.name == "memory_saver":
+        if args.get("memory_content"):
+            args["memory_content"] = unmask_client_aliases(args["memory_content"])
+        if args.get("memory_name"):
+            args["memory_name"] = unmask_client_aliases(args["memory_name"])
+    elif tool.name == "run_query":
         args["sql_query"] = unmask_client_aliases(args["sql_query"])
     elif tool.name == "generate_chart":
         args["sql_query"] = unmask_client_aliases(args["sql_query"])
@@ -74,6 +79,16 @@ def mask_after_tool_callback(tool, args, tool_context, tool_response):
         clients = tool_response.get("clients")
         if clients:
             tool_response["clients"] = json.loads(mask_client_names(json.dumps(clients, default=str)))
+    elif tool.name == "memory_saver":
+        memories = tool_response.get("memories")
+        if memories:
+            tool_response["memories"] = json.loads(mask_client_names(json.dumps(memories, default=str)))
+        memory_name = tool_response.get("memory_name")
+        if memory_name:
+            tool_response["memory_name"] = mask_client_names(memory_name)
+        memory_content = tool_response.get("memory_content")
+        if memory_content:
+            tool_response["memory_content"] = mask_client_names(memory_content)
     logger.info(tool_context.user_id)
     logger.info("mask_after_tool_callback %s args=%s response=%s", tool.name, args, tool_response)
     return tool_response

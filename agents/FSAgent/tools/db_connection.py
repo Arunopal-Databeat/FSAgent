@@ -70,3 +70,22 @@ def get_connection():
         if DB_CONNECTION_MODE == "direct":
             return _get_direct_connection()
         return _get_tunneled_connection()
+
+
+def ensure_memories_table():
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS user_memories (
+            id BIGSERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            session_id TEXT NOT NULL,
+            memory_name TEXT NOT NULL,
+            memory_content TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        )
+        """
+    )
+    conn.commit()

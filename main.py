@@ -45,8 +45,9 @@ SESSION_SERVICE_URI = (
     f"@{_session_db_host}:{_session_db_port}/{os.environ['DB_NAME']}"
 )
 
-from agents.FSAgent.tools.db_connection import get_connection as _get_agent_db_connection
+from agents.FSAgent.tools.db_connection import get_connection as _get_agent_db_connection, ensure_memories_table as _ensure_memories_table
 _get_agent_db_connection()
+_ensure_memories_table()
 import litellm
 litellm._turn_on_debug()
 
