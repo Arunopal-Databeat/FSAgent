@@ -5,6 +5,13 @@ logger = logging.getLogger("fsagent")
 from ..access_control.configure_masking import CLIENT_ALIAS, UNIQUE_CLIENTS
 
 
+def add_user_email_agent_callback(callback_context):
+    question = _content_text(callback_context.user_content)
+    callback_context.user_content.parts[0].text = f"[Current user email: {callback_context.user_id}]\n{question}"
+    logger.info("add_user_email_agent_callback: %s", callback_context.user_id)
+    return None
+
+
 def mask_client_names(text):
     for client in sorted(UNIQUE_CLIENTS, key=len, reverse=True):
         alias = CLIENT_ALIAS.get(client)
