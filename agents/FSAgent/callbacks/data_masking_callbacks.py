@@ -3,11 +3,23 @@ import logging
 
 logger = logging.getLogger("fsagent")
 from ..access_control.configure_masking import CLIENT_ALIAS, UNIQUE_CLIENTS
+from ..tools.memory_tools import _fetch_all
 
 
 def add_user_email_agent_callback(callback_context):
     question = _content_text(callback_context.user_content)
-    callback_context.user_content.parts[0].text = f"[Current user email: {callback_context.user_id}]\n{question}"
+    prefix = f"[Current user email: {callback_context.user_id}]"
+
+    if len(callback_context.session.events) <= 1:
+        memories = _fetch_all(callback_context.user_id)
+        if memories:
+            memory_lines = "\n".join(
+                f"- [memory_id={m['memory_id']}] {m['memory_name']}: {m['memory_content']}"
+                for m in memories
+            )
+            prefix += f"\n[User's saved preferences]\n{memory_lines}"
+
+    callback_context.user_content.parts[0].text = f"{prefix}\n{question}"
     logger.info("add_user_email_agent_callback: %s", callback_context.user_id)
     return None
 
