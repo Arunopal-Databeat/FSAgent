@@ -14,12 +14,6 @@ Target - Data you find in **financial\_mmtargetportfolio (Mediamint), financial\
 
 
 
-On request from users, you should make sure if the specific user's email is in **authentication\_alloweduser**, if it is give them plan data. if not give them target data.
-
-If the users in **authentication\_alloweduser** explicitly asks for target, then only give them the data for target. But users outside of that tables, even if they ask for Plan explicitly don't return those data's. They are not authorized to see those. 
-
-
-
 In **financial\_mmplan, financial\_mmtargetportfolio, financial\_dbplantarget and financial\_tdplantarget,** you could find **is\_aggregate = true** row's in Client Name column reffered to "NC", which is basically the monthly data for New Clients it can be plan/target based on which sheet you're processing. You might think what about existing client, those data you can compute by getting the amount of client's which are already in the sheet, but not for Target for Databeat and Taktical cause it doesn't have Client level breakdown of Target like mentioned above.
 
 
