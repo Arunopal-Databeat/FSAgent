@@ -4,7 +4,9 @@ import uvicorn
 from fastapi import FastAPI
 from google.adk.cli.fast_api import get_fast_api_app
 import google.auth
+from starlette.middleware import Middleware
 from follow_questions import router as follow_questions_router
+from jwt_auth import JWTAuthMiddleware
 from dotenv import load_dotenv
 load_dotenv(".env", override=True)
 
@@ -92,6 +94,15 @@ app: FastAPI = get_fast_api_app(
 )
 
 app.include_router(follow_questions_router)
+
+# Verify the dashboard's access JWT on every request. Appended (innermost) on
+# purpose: ADK's CORS layer must stay outside it so 401/403 responses still
+# carry CORS headers -- otherwise the browser reports a network error and the
+# frontend never sees the 401 that triggers its token refresh.
+JWT_SECRET = os.environ.get("JWT_SECRET", "")
+if not JWT_SECRET:
+    raise RuntimeError("JWT_SECRET must be set (same value as the dashboard backend).")
+app.user_middleware.append(Middleware(JWTAuthMiddleware, secret=JWT_SECRET))
 
 
 if __name__ == "__main__":
