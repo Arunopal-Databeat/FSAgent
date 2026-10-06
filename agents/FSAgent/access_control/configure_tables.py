@@ -7,34 +7,6 @@ logger = logging.getLogger("fsagent")
 
 REFRESH_INTERVAL_SECONDS = 24 * 60 * 60
 
-ALL_CLIENTS_NO_RESTRICTIONS_EMAILS = [
-    "aditya@databeat.io",
-    "hamrazudheen.hakkim@databeat.io",
-    "user",
-    "arunopal.dutta@databeat.io",
-    "ashok.ganapam@mediamint.com",
-    "sanjay.baliga@mediamint.com",
-    "paul.neumann@mediamint.com",
-    "rajeev@mediamint.com",
-    "aashay@mediamint.com",
-    "ashok@databeat.io",
-    "ramesh.dacha@mediamint.com",
-    "neelima@mediamint.com",
-    "ilan@taktical.co",
-    "pratyush@databeat.io",
-    "derek@taktical.co",
-    "ilan.nass@mediamint.com",
-    "derek.rubinstein@mediamint.com",
-    "anshu.kumar@mediamint.com",
-    "jason@mediamint.com",
-    "sivamani.koppisetti@mediamint.com",
-    "mindie.kaplan@mediamint.com",
-    "michael.mayer@mediamint.com",
-    "jitendra.satpute@mediamint.com",
-    "thakur.singh@mediamint.com",
-    "sumit.sharma@databeat.io",
-]
-
 _cache = {
     "data": None,
     "all_clients": None,
@@ -46,13 +18,22 @@ _cache = {
 def _fetch_write_counters(cur):
     cur.execute(
         """
-        SELECT n_tup_ins, n_tup_upd, n_tup_del
+        SELECT relname, n_tup_ins, n_tup_upd, n_tup_del
         FROM pg_stat_user_tables
-        WHERE relname = 'financial_clientportfoliomapping'
+        WHERE relname IN ('financial_clientportfoliomapping', 'authentication_alloweduser')
         """
     )
-    row = cur.fetchone()
-    return tuple(row) if row else None
+    rows = cur.fetchall()
+    return tuple(sorted(rows)) if rows else None
+
+
+def _fetch_full_access_emails(cur):
+    cur.execute(
+        """
+        SELECT email FROM "authentication_alloweduser" WHERE user_type = 'admin'
+        """
+    )
+    return [row[0] for row in cur.fetchall()]
 
 
 def _fetch_email_client_access(cur):
@@ -72,7 +53,8 @@ def _fetch_email_client_access(cur):
                 clients_by_email.setdefault(email, set()).add(client_name)
 
     access = {email: sorted(clients) for email, clients in clients_by_email.items()}
-    access.update({email: ["ALL CLIENTS NO RESTRICTIONS"] for email in ALL_CLIENTS_NO_RESTRICTIONS_EMAILS})
+    full_access_emails = _fetch_full_access_emails(cur)
+    access.update({email: ["ALL CLIENTS NO RESTRICTIONS"] for email in full_access_emails})
     return access, all_clients
 
 
@@ -90,13 +72,13 @@ def _refresh_if_needed():
     _cache["checked_at"] = now
 
     if _cache["data"] is not None and write_counters == _cache["write_counters"]:
-        logger.info("financial_clientportfoliomapping unchanged, skipping rebuild")
+        logger.info("access control tables unchanged, skipping rebuild")
         return
 
     _cache["data"], _cache["all_clients"] = _fetch_email_client_access(cur)
     _cache["write_counters"] = write_counters
     logger.info(
-        "financial_clientportfoliomapping refreshed, %d emails mapped",
+        "access control tables refreshed, %d emails mapped",
         len(_cache["data"]),
     )
 
