@@ -48,4 +48,4 @@ async def get_mapped_clients(tool_context: ToolContext) -> Dict[str, Any]:
     clients = email_client_access.get(tool_context.user_id, [])
     if not clients:
         return {"status": "error", "message": f"unfortunately this user id {tool_context.user_id} has not been mapped to any clients. Please contact the administrator. "}
-    return {"status": "success", "clients": sorted(clients)}
+    return {"status": "success", "clients": clients}

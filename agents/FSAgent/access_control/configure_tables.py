@@ -39,20 +39,25 @@ def _fetch_full_access_emails(cur):
 def _fetch_email_client_access(cur):
     cur.execute(
         """
-        SELECT "Client Name", "Portfolio Lead Email", "Client Partner Email"
+        SELECT "Client Name", "Portfolio Lead Email", "Client Partner Email", "Operational Group"
         FROM "financial_clientportfoliomapping"
         WHERE "Client Name" IS NOT NULL AND ("Portfolio Lead Email" IS NOT NULL OR "Client Partner Email" IS NOT NULL)
         """
     )
     clients_by_email = {}
+    operational_group_by_client = {}
     all_clients = set()
-    for client_name, portfolio_lead_email, client_partner_email in cur.fetchall():
+    for client_name, portfolio_lead_email, client_partner_email, operational_group in cur.fetchall():
         all_clients.add(client_name)
+        operational_group_by_client[client_name] = operational_group
         for email in (portfolio_lead_email, client_partner_email):
             if email:
                 clients_by_email.setdefault(email, set()).add(client_name)
 
-    access = {email: sorted(clients) for email, clients in clients_by_email.items()}
+    access = {
+        email: [{client: operational_group_by_client.get(client)} for client in sorted(clients)]
+        for email, clients in clients_by_email.items()
+    }
     full_access_emails = _fetch_full_access_emails(cur)
     access.update({email: ["ALL CLIENTS NO RESTRICTIONS"] for email in full_access_emails})
     return access, all_clients

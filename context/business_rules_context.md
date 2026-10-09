@@ -189,6 +189,8 @@ Columns:
 
 Description: Table which has data of all the deals (opportunities) of the clients.
 
+**Rule: Always pull the latest snapshot\_date for sales\_opportunity.** Filter to the most recent snapshot\_date before answering any question against this table.
+
 
 
 Columns:
