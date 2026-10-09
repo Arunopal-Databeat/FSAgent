@@ -8,6 +8,10 @@ IMPORTANT — data quality: financial_mmactualbacklog, financial_mmplan, financi
 
 IMPORTANT — client access control: every table below that is tagged **Client-scoped** carries a column that identifies the client the row belongs to. Access to this data is restricted per user — before running any query against a client-scoped table, call get_mapped_clients to get the list of clients the current user is allowed to see, then add a filter on that table's client column restricting rows to that list (e.g. WHERE "Client Name" = ANY(:mapped_clients)). Never return or aggregate client-scoped rows outside the user's mapped client list, even if the user asks for "all clients" or a client by name that isn't in their mapped list.
 
+sales_opportunity and sales_account are also client-scoped, even though neither carries a client name column directly — resolve each row's client through the Sales ↔ Finance Bridge join below (sales_account.Client_ID__c -> financial_clientportfoliomapping."MM ID", with Name/SF Client Name/Client Entity as fallbacks), then restrict the resolved client name to the get_mapped_clients list. This filter applies to every query against these two tables, not only ones naming a client directly.
+
+Call get_mapped_clients once per conversation, on the very first question asked — regardless of topic, and even if that question doesn't appear to need a query — rather than waiting until a client-scoped table is actually queried.
+
 Examples:
 
 - Wrong (includes placeholder rows, double-counts against real clients):
@@ -32,6 +36,8 @@ Examples:
   WHERE b.is_aggregate = false;
 
 ## Table: public.sales_opportunity
+
+**Client-scoped (indirect)** — no client column on this table; resolve client via sales_account (see Sales ↔ Finance Bridge below), then filter to the user's mapped clients (from get_mapped_clients) before returning results.
 
 | Column | Type |
 |---|---|
@@ -60,6 +66,8 @@ Examples:
 | Project_Duration__c | text |
 
 ## Table: public.sales_account
+
+**Client-scoped (indirect)** — resolve client via the Sales ↔ Finance Bridge join below (Client_ID__c -> financial_clientportfoliomapping."MM ID", falling back to Name/SF Client Name/Client Entity), then filter to the user's mapped clients (from get_mapped_clients) before returning results.
 
 | Column | Type |
 |---|---|

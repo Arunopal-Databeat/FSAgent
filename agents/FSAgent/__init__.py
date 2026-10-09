@@ -14,10 +14,7 @@ if _needs_setup:
     _file_handler.setLevel(logging.DEBUG)
     _file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     _root_logger.addHandler(_file_handler)
-    if _root_logger.level == logging.NOTSET or _root_logger.level > logging.DEBUG:
-        _root_logger.setLevel(logging.DEBUG)
 
-    logging.getLogger("google_adk").setLevel(logging.DEBUG)
     logging.getLogger("paramiko.transport").setLevel(logging.WARNING)
     logging.getLogger("graphviz._tools").setLevel(logging.WARNING)
 
@@ -28,5 +25,9 @@ if _needs_setup:
         for _h in _target_logger.handlers:
             if not isinstance(_h, logging.FileHandler) and _h.level < logging.ERROR:
                 _h.setLevel(logging.ERROR)
+
+    if _root_logger.level == logging.NOTSET or _root_logger.level > logging.DEBUG:
+        _root_logger.setLevel(logging.DEBUG)
+    logging.getLogger("google_adk").setLevel(logging.DEBUG)
 
 from . import agent

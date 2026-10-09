@@ -100,7 +100,8 @@ Some deals have no ID, no SF Client Name entry, and a Salesforce name that doesn
 | **Win Rate** | Closed Won ÷ (Closed Won + Closed Lost + Withdrawn) |
 | **Open Deal** | Any deal **not** in Closed Won / Closed Lost / Withdrawn stages |
 | **Closed Deal** | Deal in Closed Won, Closed Lost, or Withdrawn stage |
-| **Stuck Deal** | Deal age > 60 days |
+| **Deal Age** | `CURRENT_DATE - CreatedDate` (days). Always measured from `CreatedDate` — never substitute `LastStageChangeInDays` or `LastActivityInDays` for "age". |
+| **Stuck Deal** | An **open** deal (see Open Deal above) whose Deal Age > 60 days |
 | **Past Close Date Deal** | Deal whose close date has already passed |
 | **Churn** | Comparison of a client's revenue this month vs. the prior month |
 
