@@ -191,6 +191,8 @@ Description: Table which has data of all the deals (opportunities) of the client
 
 **Rule: Always pull the latest snapshot\_date for sales\_opportunity.** Filter to the most recent snapshot\_date before answering any question against this table.
 
+**Rule: Deals (opportunities) are only counted for active accounts.** When counting, summing, or otherwise aggregating deals from sales\_opportunity, join to sales\_account via AccountId and filter to sales\_account.Status\_\_c = 'Active'. This applies to any question about deal counts or deal-derived metrics, not only ones that explicitly mention account status.
+
 
 
 Columns:
