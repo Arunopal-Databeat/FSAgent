@@ -249,6 +249,8 @@ Taktical FY27 Plan & Target
 
 Steps 1-3 apply to specific account attribution (Use Case B). All 4 steps apply to broad group/entity classification (Use Case A) — stop at the first step that returns a match.
 
+IMPORTANT — access control on Step 4 rows: a row that only matches via Step 4 (Steps 1-3 all failed) has no resolved client — it is only known to belong to an Operational Group, not to a specific client, so it cannot be checked against the user's mapped client list. Never expose such a row's individual fields (deal name, account name, ACV, stage, close date, etc.). It may only be reported as part of an aggregate count/sum at the Operational Group level, and only for groups the user already has mapped clients in.
+
 ### Finance Tables ↔ Central Mapping Sheet
 
 All finance tables join back to financial_clientportfoliomapping using client name (and MM ID where available) as the key:
