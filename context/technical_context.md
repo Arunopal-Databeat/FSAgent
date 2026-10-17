@@ -67,21 +67,11 @@ This is the tab used to tie together Client, Financial data, and Sales data. It 
 1. **Match by ID** (most reliable) — Opportunity's `AccountId` → Account table's `Client_id__c`, matched against **MM ID** in the mapping sheet.
 2. **Match by "SF Client Name"** — the mapping sheet's manually-verified Salesforce spelling, matched against the Account table's `Name` column.
 3. **Match by Client Entity name** — direct comparison of Client Entity to the Account table's `Name` column.
-4. **Match by "Company Group" tag** (last resort) — the deal's own Company Group field (in the Opportunity table) matched against the mapping sheet's **Operational Group** column. This only reveals which broad group (Mediamint / DataBeat / Taktical) a deal belongs to — never a specific client.
 
-A deal that fails every applicable step is correctly left **unmapped** rather than being force-matched.
+A deal that fails every step is correctly left **unmapped** rather than being force-matched — including at the group level. There is no group-level fallback: the Opportunity table's `Company_Group__c` field is not used for client or group attribution (it produced false-positive group matches and has been removed from the waterfall), so it must never be joined against the mapping sheet's Operational Group column to attribute a deal.
 
-### 5.2 Two Different Uses of the Same Logic
-
-| Use Case | Steps Used | Why |
-|---|---|---|
-| **A — Business Group classification** (entity filters, "Biz Group" column, group summary tables) | 1, 2, 3, 4 | Only needs to answer "which group does this belong to" — the broad Company Group tag is good enough |
-| **B — Specific client account attribution** (Portfolio Revenue account cards, account-level summaries) | 1, 2, 3 **only** | Step 4 can only identify a broad group, never a specific account, so it's skipped entirely here |
-
-A deal can therefore be correctly counted at the group level (via Step 4) while still being unattributed to any one specific account (since Step 4 doesn't apply to use case B).
-
-### 5.3 Known Gap
-Some deals have no ID, no SF Client Name entry, and a Salesforce name that doesn't match the internal records at all. These can't be attributed to a specific account (Use Case B), even though they may still resolve correctly at the group level (Use Case A). Closing this gap means adding more entries to the SF Client Name column for the clients still falling through.
+### 5.2 Known Gap
+Some deals have no ID, no SF Client Name entry, and a Salesforce name that doesn't match the internal records at all. These are unmapped — not attributable to a specific account, and not countable toward any group-level total either. Closing this gap means adding more entries to the SF Client Name column for the clients still falling through.
 
 ---
 

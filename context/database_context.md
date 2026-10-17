@@ -55,7 +55,7 @@ Examples:
 | CreatedDate | timestamptz |
 | Annual_Contracted_Value__c | double precision |
 | LeadSource | text |
-| Company_Group__c | text |
+| Company_Group__c | text (not used for client/group attribution — see Sales ↔ Finance Bridge note below) |
 | Go_Live_Date__c | text |
 | HeadCount__c | text |
 | Resource_Type__c | text |
@@ -245,11 +245,10 @@ Taktical FY27 Plan & Target
 | sales_account | Client_ID__c | financial_clientportfoliomapping | MM ID | Step 1 (most reliable) - ID match |
 | sales_account | Name | financial_clientportfoliomapping | SF Client Name | Step 2 - verified SF spelling match |
 | sales_account | Name | financial_clientportfoliomapping | Client Entity | Step 3 - direct entity name match |
-| sales_opportunity | Company_Group__c | financial_clientportfoliomapping | Operational Group | Step 4 (last resort, group-level only) |
 
-Steps 1-3 apply to specific account attribution (Use Case B). All 4 steps apply to broad group/entity classification (Use Case A) — stop at the first step that returns a match.
+Stop at the first step that returns a match. A deal/account that fails all three steps is unmapped — it is not attributable to any specific client and must not be counted toward any client or Operational Group total either.
 
-IMPORTANT — access control on Step 4 rows: a row that only matches via Step 4 (Steps 1-3 all failed) has no resolved client — it is only known to belong to an Operational Group, not to a specific client, so it cannot be checked against the user's mapped client list. Never expose such a row's individual fields (deal name, account name, ACV, stage, close date, etc.). It may only be reported as part of an aggregate count/sum at the Operational Group level, and only for groups the user already has mapped clients in.
+IMPORTANT — no group-level fallback: `sales_opportunity.Company_Group__c` must never be joined against financial_clientportfoliomapping."Operational Group" to attribute a deal to a client or group — it produced false-positive group matches and is not part of the mapping waterfall. An unmapped deal stays excluded from both row-level results and aggregate group-level totals.
 
 ### Finance Tables ↔ Central Mapping Sheet
 
